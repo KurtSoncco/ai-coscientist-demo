@@ -5,8 +5,14 @@ description = "Rediscover Kepler's third law with free-tier AI co-scientist tool
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "matplotlib>=3.10.9",
+    "numpy>=2.2.6",
+    "open-coscientist>=0.2.0",
     "openevolve",
+    "scipy>=1.15.3",
 ]
 
 [tool.uv]
 package = false
+# open-coscientist 0.2.0 imports an MCP adapter that does not work with mcp 2.x.
+constraint-dependencies = ["mcp<2"]

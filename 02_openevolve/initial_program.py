@@ -6,10 +6,19 @@ import math  # noqa: F401  (available to evolved code)
 
 
 # EVOLVE-BLOCK-START
-def predict_period_days(a_km: float, central_mass_kg: float) -> float:
-    """Predict the orbital period (days) from orbit size and central mass.
+def fit(train_rows):
+    """Learn a formula for y from x1 and x2.
 
-    Naive guess: period grows linearly with distance and ignores mass.
+    train_rows is a list of dicts with keys "x1", "x2", "y" (all positive).
+    Return a function predict(x1, x2) -> y. Any constant in the formula must
+    be estimated here from train_rows.
+
+    Naive guess: y grows linearly with x1 and ignores x2.
     """
-    return 6.0e-4 * a_km
+    c = math.exp(sum(math.log(r["y"] / r["x1"]) for r in train_rows) / len(train_rows))
+
+    def predict(x1: float, x2: float) -> float:
+        return c * x1
+
+    return predict
 # EVOLVE-BLOCK-END

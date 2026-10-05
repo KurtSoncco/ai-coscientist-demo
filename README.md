@@ -1,195 +1,172 @@
-# AI Co-Scientist Demo: Rediscovering Kepler's Law on a Free Tier
+# AI Co-Scientist Demo: Finding a Law in Noisy Data
 
-A 30-minute, three-tool walk through the AI research pipeline, built for
-UC Berkeley students who have no paid AI plan.
+A short, hands-on walk through an AI-assisted research workflow: propose
+hypotheses, gather evidence, test the hypotheses, write the paper. Built for
+UC Berkeley students with no paid AI plan.
 
-**The question:** from 16 real orbits (8 planets plus moons of Jupiter, Saturn
-and Earth), can AI tools find a law that predicts orbital period, and does it
-generalize to systems it never saw?
+## The idea
 
-**The twist:** Kepler's planets-only law (`T² ∝ a³`) fits the Sun's planets
-almost perfectly and fails badly on Saturn's moons. Only a law that includes
-the central mass, `T = 2π √(a³ / GM)`, passes the held-out test.
-
-## Contents
-
-- [Quick start](#quick-start)
-- [The pipeline](#the-pipeline)
-- [Repo layout](#repo-layout)
-- [Stage 1: Co-Scientist loop by hand](#stage-1-co-scientist-loop-by-hand)
-- [Stage 2: Evolve the code with OpenEvolve](#stage-2-evolve-the-code-with-openevolve)
-- [Stage 3: Write it up with OpenScience](#stage-3-write-it-up-with-openscience)
-- [How scoring works](#how-scoring-works)
-- [Rules for using AI co-scientists](#rules-for-using-ai-co-scientists)
-- [Troubleshooting](#troubleshooting)
-- [Data sources](#data-sources)
+- **Task.** Given 29 noisy measurements of three unnamed quantities (`x1`,
+  `x2`, `y`), find the law that links them and show that it holds for groups
+  it never saw.
+- **Blind.** The AI is not told what the data are. Names are hidden, units are
+  scrambled and noise is added, so the law must be fitted and tested. It
+  cannot be recited from memory.
+- **Reveal.** The data are real orbits. The law is Kepler's third law with
+  Newton's mass term, `T = 2π √(a³ / GM)`, and the final paper checks the
+  blind result against Galileo (1610), Kepler (1619) and Newton (1687).
 
 ## Quick start
 
-You need [uv](https://docs.astral.sh/uv/) and nothing else. uv installs a
-matching Python if you do not have one (3.10 or newer).
+Requires [uv](https://docs.astral.sh/uv/). No API key needed.
 
 ```bash
-# Install uv (skip if you already have it)
-curl -LsSf https://astral.sh/uv/install.sh | sh          # macOS / Linux
-# powershell -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
-
 git clone https://github.com/KurtSoncco/ai-coscientist-demo.git
 cd ai-coscientist-demo
-
-# Create .venv/ and install the locked dependencies
-uv sync
-
-# Works with no API key: evolution without an LLM, about 1 second
-uv run python 02_openevolve/mini_evolve.py
-
-# Score any hypothesis file
-uv run python 02_openevolve/evaluator.py 02_openevolve/initial_program.py
+uv sync          # creates .venv/ with the locked dependencies
+./run_all.sh     # all offline stages, a few seconds
 ```
 
-`uv sync` creates a virtual environment in `.venv/` from `pyproject.toml` and
-`uv.lock`, so everyone in the room gets the same package versions. `uv run`
-uses that environment without activating it. To activate it yourself:
+This writes the results to `results/` and a paper to `paper/report.md`.
+Finished examples are in [`paper/`](paper/).
 
-```bash
-source .venv/bin/activate        # macOS / Linux
-# .venv\Scripts\activate         # Windows
-```
+## The four stages
 
-### Expected output
-
-`mini_evolve.py` sits at `a^1.25 · M^-0.25` for 8 generations, then a joint
-mutation escapes to `a^1.5 · M^-0.5`:
-
-```
-gen  1  best: period ~ a^+1.25 * M^-0.25   held-out log10 error = 0.2382  <- new best
-...
-gen  8  best: period ~ a^+1.25 * M^-0.25   held-out log10 error = 0.2382
-gen  9  best: period ~ a^+1.50 * M^-0.50   held-out log10 error = 0.0006  <- new best
-...
-Discovered law: period is proportional to a^1.5 * M^-0.5
-Implied gravitational constant G = 6.6835e-11  (accepted: 6.6740e-11)
-```
-
-`evaluator.py` on the naive starting program prints a `combined_score` of
-about 0.38.
-
-### Without uv
-
-The two commands above use only the Python standard library, so plain
-`python 02_openevolve/mini_evolve.py` works. For Stage 2, install the one
-dependency into a virtual environment of your own:
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install openevolve
-```
-
-## The pipeline
-
-| Stage | Tool | Mirrors | Cost |
+| Stage | Question | AI tool | No-key fallback |
 | --- | --- | --- | --- |
-| 1. Literature → hypotheses | Gemini app (Berkeley account) | Google Co-Scientist's agent loop | Free, campus license |
-| 2. Hypothesis → evidence | [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) | DeepMind AlphaEvolve | Free Gemini API key |
-| 3. Evidence → paper | [OpenScience](https://github.com/synthetic-sciences/openscience) | Claude Science, Sakana AI Scientist | Same free key |
+| 1. Hypotheses | What could the law be? | [Open Coscientist](https://github.com/jataware/open-coscientist) | Prompts by hand in a chat app |
+| 2. Evidence | Which formula predicts unseen groups? | [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) | `mini_evolve.py` |
+| 3. Tests | Is the evidence strong enough? | None: plain statistics | Always offline |
+| 4. Paper | How does it compare with the literature? | [OpenScience](https://github.com/synthetic-sciences/openscience) | `make_paper.py` |
 
-Each stage hands one thing to the next: Stage 1 produces a candidate formula,
-Stage 2 tests and improves it against data, Stage 3 turns the result into a
-short report.
+Stages 1 to 3 are blind. Stage 3 ends by opening the key. Stage 4 is
+unblinded and uses the old papers in [`literature/`](literature/README.md).
+
+### Stage 1: Hypotheses
+
+Agents generate, review, rank (Elo tournament) and refine formulas.
+
+```bash
+export OPENAI_API_KEY=your-key
+uv run python 01_hypotheses/run_coscientist.py --model gpt-4.1-mini
+```
+
+No key: follow [`01_hypotheses/prompts.md`](01_hypotheses/prompts.md).
+
+### Stage 2: Evidence
+
+An LLM rewrites a Python function, `fit(train_rows) -> predict(x1, x2)`, and
+keeps the versions that score better on held-out groups.
+
+```bash
+uv run openevolve-run 02_openevolve/initial_program.py 02_openevolve/evaluator.py \
+  --config 02_openevolve/config.openai.yaml --iterations 30
+```
+
+No key: `uv run python 02_openevolve/mini_evolve.py`
+
+### Stage 3: Hypothesis tests and reveal
+
+```bash
+uv run python 03_tests/hypothesis_tests.py
+```
+
+Compares four hypotheses, puts bootstrap intervals on the exponents, tests
+whether `x2` matters, then opens the key and estimates G.
+
+### Stage 4: The paper
+
+```bash
+uv run python 04_paper/make_paper.py        # template paper, no key
+```
+
+With OpenScience, an agent writes the paper itself: see
+[`04_paper/goal.md`](04_paper/goal.md).
+
+## Results
+
+From Stage 3, on the committed data:
+
+| Hypothesis | Formula | Held-out error (dex) |
+| --- | --- | --- |
+| H1 | `y = c * x1` | 0.245 |
+| H2 | `y = c * x1^p` (Kepler's form, no mass) | 0.293 |
+| H3 | `y = c * x1^p * x2^q` | 0.037 |
+| H4 | `y = c * x1^(3/2) * x2^(-1/2)` (Newton's form) | 0.036 |
+
+- **Exponents:** p = 1.506 and q = −0.507. Their 95% intervals contain 3/2
+  and −1/2.
+- **Mass matters:** p = 1.3e-09 on a test with one point per group.
+- **G:** 7.256e-11, which is 8.7% above the accepted 6.674e-11.
+- **A lesson in uncertainty:** the interval for G from resampling rows,
+  [6.899e-11, 7.630e-11], misses the accepted value. Resampling whole groups
+  gives [6.591e-11, 7.892e-11], which contains it. Rows that share one mass
+  estimate are not independent.
+
+![Predicted against observed y, without and with x2](paper/fig_pred_vs_obs.png)
+
+## What the AI tools did in our test runs
+
+One run each, with an OpenAI key.
+
+| Stage | Model | Outcome |
+| --- | --- | --- |
+| 1. Open Coscientist | `gpt-4.1-mini` | Completed in 96 s. Its top-ranked hypotheses were elaborate power laws with the wrong sign on the `x2` exponent (+0.5; the data say −0.5). |
+| 2. OpenEvolve | `gpt-4o-mini` | Score rose from 0.803 to 0.964: a least-squares power law fitted from the data, as good as H3. Only 10 of 30 iterations ran because of a rate limit. |
+| 4. OpenScience | `gpt-4.1-mini` | Wrote a full paper in 40 s. Tables were correct, but it had six errors, including the headline one. Audit in [`paper/README.md`](paper/README.md). |
+
+The pattern is the point of the demo: debate ranked a wrong hypothesis first,
+the held-out score found the right one, and the fluent write-up still needed
+checking line by line.
+
+## Using another provider
+
+| Provider | Key variable | Stage 1 `--model` | Stage 2 `--config` |
+| --- | --- | --- | --- |
+| Gemini (free tier) | `GEMINI_API_KEY` | `gemini/gemini-2.5-flash` | `02_openevolve/config.yaml` |
+| OpenAI (paid) | `OPENAI_API_KEY` | `gpt-4.1-mini` | `02_openevolve/config.openai.yaml` |
+| Anthropic (paid) | `ANTHROPIC_API_KEY` | `anthropic/claude-haiku-4-5-20251001` | `02_openevolve/config.anthropic.yaml` |
+
+Only OpenAI has been run so far. `run_all.sh` uses whichever key is exported.
+Never commit a key.
 
 ## Repo layout
 
 ```
-data/orbits.csv                   16 orbits; split=train (Sun, Jupiter) / test (Saturn, Earth)
-01_hypotheses/prompts.md          five prompts: Generation, Reflection, Ranking, Evolution, Meta-review
-02_openevolve/initial_program.py  naive starting law (linear in distance, ignores mass)
-02_openevolve/evaluator.py        the judge: log10 error on held-out systems -> combined_score
-02_openevolve/config.yaml         OpenEvolve on the free Gemini tier
-02_openevolve/mini_evolve.py      offline fallback: no LLM, no key, runs in 1 second
-03_openscience/goal.md            setup and prompt for the end-to-end write-up
-pyproject.toml, uv.lock           dependencies, pinned for reproducible installs
+data/            orbits.csv (real), make_dataset.py, observations.csv (what the AI sees), key.json
+01_hypotheses/   run_coscientist.py, prompts.md
+02_openevolve/   initial_program.py, evaluator.py, config*.yaml, mini_evolve.py
+03_tests/        hypothesis_tests.py
+04_paper/        goal.md (OpenScience), make_paper.py
+literature/      Galileo 1610, Kepler 1619, Newton 1687: citations and quotations
+paper/           example papers and the audit of the AI-written one
+run_all.sh       every stage in order
 ```
-
-## Stage 1: Co-Scientist loop by hand
-
-No API and no install. Open the Gemini app with your Berkeley account, paste
-`data/orbits.csv`, and run the five prompts in
-[`01_hypotheses/prompts.md`](01_hypotheses/prompts.md) in order. You act as
-the Supervisor; Gemini plays each agent in turn.
-
-To carry the result forward, paste the winning expression into
-`02_openevolve/initial_program.py`, or keep the naive starting point and let
-evolution find the law.
-
-## Stage 2: Evolve the code with OpenEvolve
-
-1. Get a free API key at [Google AI Studio](https://aistudio.google.com) (no
-   credit card).
-2. Run:
-
-```bash
-export GEMINI_API_KEY=your-key        # never commit it
-uv run openevolve-run 02_openevolve/initial_program.py 02_openevolve/evaluator.py \
-  --config 02_openevolve/config.yaml --iterations 30
-```
-
-The best program lands in `openevolve_output/best/`. OpenEvolve may only
-rewrite the code between the `EVOLVE-BLOCK` markers in `initial_program.py`.
-
-Reference scores:
-
-| Hypothesis | `combined_score` |
-| --- | --- |
-| Correct law, `T = 2π √(a³ / GM)` | about 0.999 |
-| Naive start, linear in distance | 0.38 |
-| Kepler's planets-only law | 0.33 |
-
-No key, or the free tier is out of quota? Run `mini_evolve.py` instead. It
-shows the same plateau-then-breakthrough behavior with random mutations in
-place of an LLM.
-
-## Stage 3: Write it up with OpenScience
-
-Follow [`03_openscience/goal.md`](03_openscience/goal.md). OpenScience is a
-Node.js tool, so it needs `npm` and is installed separately from the Python
-environment. Record this run in advance: it makes many calls and can hit the
-free tier's daily limit.
-
-## How scoring works
-
-`evaluator.py` loads a candidate's `predict_period_days(a_km, central_mass_kg)`
-and measures the mean absolute error in `log10(period)`:
-
-- **Train** rows are the Sun's 8 planets and Jupiter's 4 moons.
-- **Test** rows are 3 of Saturn's moons and Earth's Moon.
-- `combined_score = 1 / (1 + test_error)`, so 1.0 is perfect and being off by
-  one order of magnitude gives 0.5.
-- A candidate that crashes or returns a non-positive or non-finite value
-  scores 0.
-
-Only the test error drives evolution. A law that ignores the central mass can
-fit the training systems and still lose, which is what forces the mass term.
 
 ## Rules for using AI co-scientists
 
 - **The evaluator is the science.** Evolution only optimizes what you measure.
-  Here the held-out split is what forces the mass term.
-- **Verify every citation and number.** Click the sources; rerun the code.
-- **Keep unpublished data off free tiers.** Google may use free-tier prompts;
-  use a local open-weight model for private data.
-- **Disclose AI use** per your course and venue policy. You own every claim.
+- **Check whether it discovered or remembered.** With real names and units,
+  the model wrote Kepler's law with the textbook G on its first try.
+- **Use the uncertainty that matches the data.**
+- **Verify every citation and number.** Open the source; rerun the code.
+- **Keep unpublished data off free tiers.**
+- **Disclose AI use.** You own every claim.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
-| `uv: command not found` | Install uv (see [Quick start](#quick-start)) and open a new terminal. |
-| `openevolve-run: command not found` | Prefix it with `uv run`, or activate `.venv` first. |
-| Authentication error in Stage 2 | `GEMINI_API_KEY` is not set in this terminal; export it again. |
-| HTTP 429 or quota errors | The free tier's limit is used up. Lower `--iterations`, wait, or use `mini_evolve.py`. |
-| Model not found | Change `llm.models[0].name` in `02_openevolve/config.yaml` to a Gemini model your key can use. |
+| `uv: command not found` | Install uv: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| HTTP 429, "requests per day" | Rate limit. New OpenAI accounts can be capped at 50 requests a day per model. Wait, switch model, or use the fallback. |
+| HTTP 429, "no credits remaining" | Add credits on the provider's billing page. |
+| Anthropic 400, "not scoped to a workspace" | Create the key inside a workspace in the Anthropic Console. |
+| `ImportError` from `mcp` | Install with `uv sync`, which pins `mcp<2`. |
 
-## Data sources
+## Sources and licences
 
-Orbital elements and masses are standard published values (NASA planetary and
-satellite fact sheets), rounded to 4–5 significant figures.
+- `data/orbits.csv`: NASA planetary and satellite fact sheets. Every row
+  agrees with Kepler's law to within 1%.
+- `literature/`: public-domain editions, linked there.
+- Open Coscientist: MIT with Commons Clause. OpenEvolve and OpenScience:
+  Apache 2.0.

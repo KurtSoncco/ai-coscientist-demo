@@ -1,25 +1,27 @@
 """Evaluator for OpenEvolve: the metric is the scientist's judge.
 
-Fits are scored by mean absolute error in log10(period). The score that drives
-evolution uses the held-out systems (Saturn's moons and Earth's Moon), so a law
-that ignores the central mass cannot win by memorizing the training systems.
+A candidate defines fit(train_rows) and returns a function predict(x1, x2).
+It only ever sees the training groups, so its constants must come from data.
+Fits are scored by mean absolute error in log10(y). The score that drives
+evolution uses the held-out groups, so a law that ignores x2 cannot win by
+memorizing the training groups.
 """
 import csv
 import importlib.util
 import math
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent.parent / "data" / "orbits.csv"
+DATA = Path(__file__).resolve().parent.parent / "data" / "observations.csv"
 
 
-def load_rows():
-    with open(DATA, newline="") as f:
+def load_rows(path=DATA):
+    with open(path, newline="") as f:
         return [
             {
-                "body": r["body"],
-                "a_km": float(r["semi_major_axis_km"]),
-                "mass": float(r["central_mass_kg"]),
-                "period": float(r["period_days"]),
+                "group": r["group"],
+                "x1": float(r["x1"]),
+                "x2": float(r["x2"]),
+                "y": float(r["y"]),
                 "split": r["split"],
             }
             for r in csv.DictReader(f)
@@ -29,10 +31,10 @@ def load_rows():
 def log_error(fn, rows):
     errors = []
     for r in rows:
-        pred = fn(r["a_km"], r["mass"])
+        pred = fn(r["x1"], r["x2"])
         if not (isinstance(pred, (int, float)) and math.isfinite(pred) and pred > 0):
             return float("inf")
-        errors.append(abs(math.log10(pred) - math.log10(r["period"])))
+        errors.append(abs(math.log10(pred) - math.log10(r["y"])))
     return sum(errors) / len(errors)
 
 
@@ -41,9 +43,11 @@ def evaluate(program_path):
     module = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(module)
-        fn = module.predict_period_days
         rows = load_rows()
-        train = log_error(fn, [r for r in rows if r["split"] == "train"])
+        train_rows = [r for r in rows if r["split"] == "train"]
+        # Copies with only x1, x2, y: the candidate cannot peek at groups or splits.
+        fn = module.fit([{k: r[k] for k in ("x1", "x2", "y")} for r in train_rows])
+        train = log_error(fn, train_rows)
         test = log_error(fn, [r for r in rows if r["split"] == "test"])
     except Exception as exc:  # broken candidates score zero, never crash the run
         return {"combined_score": 0.0, "error": str(exc)}

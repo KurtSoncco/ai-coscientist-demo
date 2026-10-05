@@ -1,0 +1,26 @@
+{
+  "meaning": {
+    "x1": "semi-major axis of the orbit",
+    "x2": "mass of the central body",
+    "y": "orbital period"
+  },
+  "units": {
+    "x1_km": 73000.0,
+    "x2_kg": 4.1e+22,
+    "y_days": 0.027
+  },
+  "groups": {
+    "A": "Sun",
+    "B": "Uranus",
+    "C": "Neptune",
+    "D": "Saturn",
+    "E": "Mars",
+    "F": "Jupiter",
+    "G": "Earth"
+  },
+  "noise": {
+    "x1_and_y": 0.03,
+    "x2_per_group": 0.1
+  },
+  "seed": 1619
+}

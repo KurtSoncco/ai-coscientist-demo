@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .openscience/
 .venv/
+results/
+paper/report.md
+.coscientist_cache/
+.coscientist_prompts/

@@ -1,13 +1,13 @@
-# OpenEvolve on the free Gemini API tier (key from https://aistudio.google.com).
-# export GEMINI_API_KEY=...   (never commit the key)
-max_iterations: 30          # keep small: the free tier has low daily limits
+# OpenEvolve with an OpenAI API key (paid; https://platform.openai.com).
+# export OPENAI_API_KEY=...   (never commit the key)
+max_iterations: 30
 random_seed: 42
 
 llm:
-  api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
-  api_key: "${GEMINI_API_KEY}"
+  api_base: "https://api.openai.com/v1"
+  api_key: "${OPENAI_API_KEY}"
   models:
-    - name: "gemini-2.5-flash-lite"   # most generous free quota; swap for a Flash model if available
+    - name: "gpt-4o-mini"   # small and cheap; swap for any chat model on your account
       weight: 1.0
   temperature: 0.8
 
