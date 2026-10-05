@@ -1,0 +1,17 @@
+system,body,central_mass_kg,semi_major_axis_km,period_days,split
+Sun,Mercury,1.989e30,57.91e6,87.969,train
+Sun,Venus,1.989e30,108.21e6,224.701,train
+Sun,Earth,1.989e30,149.60e6,365.256,train
+Sun,Mars,1.989e30,227.92e6,686.980,train
+Sun,Jupiter,1.989e30,778.57e6,4332.59,train
+Sun,Saturn,1.989e30,1433.53e6,10759.22,train
+Sun,Uranus,1.989e30,2872.46e6,30688.5,train
+Sun,Neptune,1.989e30,4495.06e6,60182.0,train
+Jupiter,Io,1.898e27,421.7e3,1.769,train
+Jupiter,Europa,1.898e27,671.0e3,3.551,train
+Jupiter,Ganymede,1.898e27,1070.4e3,7.155,train
+Jupiter,Callisto,1.898e27,1882.7e3,16.689,train
+Saturn,Enceladus,5.683e26,238.04e3,1.370,test
+Saturn,Rhea,5.683e26,527.04e3,4.518,test
+Saturn,Titan,5.683e26,1221.87e3,15.945,test
+Earth,Moon,5.972e24,384.4e3,27.322,test
